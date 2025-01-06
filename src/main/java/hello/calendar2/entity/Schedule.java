@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
-@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -38,4 +37,9 @@ public class Schedule {
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
+
+    public void update(String title, String description) {
+        this.title = title;
+        this.description = description;
+    }
 }

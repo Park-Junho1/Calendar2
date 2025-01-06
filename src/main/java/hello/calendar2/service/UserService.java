@@ -3,12 +3,12 @@ package hello.calendar2.service;
 import hello.calendar2.dto.UserRequestDto;
 import hello.calendar2.dto.UserResponseDto;
 import hello.calendar2.entity.User;
+import hello.calendar2.exception.CustomException;
+import hello.calendar2.exception.ErrorCode;
 import hello.calendar2.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -30,16 +30,15 @@ public class UserService {
 
     public UserResponseDto getUserById(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         return new UserResponseDto(user);
     }
 
     public UserResponseDto updateUser(Long userId, UserRequestDto userRequestDto) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        user.setUsername(userRequestDto.getUsername());
-        user.setEmail(userRequestDto.getEmail());
+        user.update(userRequestDto.getUsername(), userRequestDto.getEmail());
         userRepository.save(user);
 
         return new UserResponseDto(user);
@@ -47,17 +46,17 @@ public class UserService {
 
     public void deleteUser(Long userId) {
         if(!userRepository.existsById(userId)) {
-            throw new RuntimeException("User not found");
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
         }
         userRepository.deleteById(userId);
     }
 
     public User login(String email, String password) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Invaild email or password"));
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_CREDENTIALS));
 
         if(!user.getPassword().equals(password)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Incorrect password");
+            throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
         }
         return user;
     }

@@ -4,6 +4,8 @@ import hello.calendar2.dto.ScheduleRequestDto;
 import hello.calendar2.dto.ScheduleResponseDto;
 import hello.calendar2.entity.Schedule;
 import hello.calendar2.entity.User;
+import hello.calendar2.exception.CustomException;
+import hello.calendar2.exception.ErrorCode;
 import hello.calendar2.repository.ScheduleRepository;
 import hello.calendar2.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +24,7 @@ public class ScheduleService {
     @Transactional
     public ScheduleResponseDto createSchedule(ScheduleRequestDto scheduleRequestDto) {
         User user = userRepository.findById(scheduleRequestDto.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         Schedule schedule = Schedule.builder()
                 .title(scheduleRequestDto.getTitle())
@@ -35,6 +37,10 @@ public class ScheduleService {
     }
 
     public List<ScheduleResponseDto> getSchedulesByUserId(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
+
         List<Schedule> schedules = scheduleRepository.findByUserId(userId);
         return schedules.stream()
                 .map(ScheduleResponseDto::new)
@@ -43,17 +49,17 @@ public class ScheduleService {
 
     public ScheduleResponseDto updateSchedule(Long id, ScheduleRequestDto scheduleRequestDto) {
         Schedule schedule = scheduleRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Schedule not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
 
-        schedule.setTitle(scheduleRequestDto.getTitle());
-        schedule.setDescription(scheduleRequestDto.getDescription());
+        schedule.update(scheduleRequestDto.getTitle(), scheduleRequestDto.getDescription());
+
         scheduleRepository.save(schedule);
         return new ScheduleResponseDto(schedule);
     }
 
     public void deleteSchedule(Long id) {
         if (!scheduleRepository.existsById(id)) {
-            throw new RuntimeException("Schedule already exists");
+            throw new CustomException(ErrorCode.SCHEDULE_NOT_FOUND);
         }
         scheduleRepository.deleteById(id);
     }

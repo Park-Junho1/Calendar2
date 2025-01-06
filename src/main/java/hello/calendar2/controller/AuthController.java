@@ -2,6 +2,7 @@ package hello.calendar2.controller;
 
 import hello.calendar2.dto.LoginDto;
 import hello.calendar2.entity.User;
+import hello.calendar2.service.SessionService;
 import hello.calendar2.service.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,9 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -24,23 +22,7 @@ import java.util.UUID;
 public class AuthController {
 
     private final UserService userService;
-    private final Map<String, String> sessionStore = new HashMap<>();
-
-    @GetMapping("/session")
-    public String sessionAPI(HttpServletRequest request) {
-        log.info("::: AuthController.sessionAPI()");
-
-        Cookie[] cookies = request.getCookies();
-        String sessionId = findCookie("sessionId", cookies);
-
-        if (sessionId != null && sessionStore.containsKey(sessionId)) {
-            log.info("found userId: {}", sessionId);
-            return "user found: " + sessionId;
-        } else {
-            log.info("user not found");
-            return "user not found";
-        }
-    }
+    private final SessionService sessionService;
 
     @PostMapping("/session-login")
     public ResponseEntity<String> cookieLoginAPI(@RequestBody LoginDto loginDto) {
@@ -49,13 +31,28 @@ public class AuthController {
         User user = userService.login(loginDto.getEmail(), loginDto.getPassword());
 
         String sessionId = UUID.randomUUID().toString();
-        sessionStore.put(sessionId, "userId: " + sessionId);
-
+        sessionService.saveSession(sessionId, user.getId().toString());
 
         HttpHeaders headers = new HttpHeaders();
         headers.add("Set-Cookie", "sessionId=" + sessionId);
 
         return new ResponseEntity<>("login success", headers, HttpStatus.OK);
+    }
+
+    @GetMapping("/session")
+    public String sessionAPI(HttpServletRequest request) {
+        log.info("::: AuthController.sessionAPI()");
+
+        Cookie[] cookies = request.getCookies();
+        String sessionId = findCookie("sessionId", cookies);
+
+        if (sessionId != null && sessionService.isValidSession(sessionId)) {
+            log.info("found userId: {}", sessionId);
+            return "user found: " + sessionId;
+        } else {
+            log.info("user not found");
+            return "user not found";
+        }
     }
 
     private String findCookie(String key, Cookie[] cookies) {
